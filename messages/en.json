@@ -1,0 +1,74 @@
+{
+  "Meta": {
+    "title": "Kate — Full-stack developer",
+    "description": "Kate's portfolio: I design interfaces, write APIs and take products all the way to production."
+  },
+  "Sections": {
+    "hero": { "label": "01 · emerald coat", "navLabel": "Hello", "accentName": "emerald" },
+    "about": { "label": "02 · turquoise coat", "navLabel": "About", "accentName": "turquoise" },
+    "skills": { "label": "03 · macaw-yellow coat", "navLabel": "Skills", "accentName": "macaw yellow" },
+    "projects": { "label": "04 · fuchsia coat", "navLabel": "Projects", "accentName": "fuchsia" },
+    "process": { "label": "05 · tropical orange coat", "navLabel": "Process", "accentName": "orange" },
+    "contact": { "label": "06 · night coat, with gold", "navLabel": "Contact", "accentName": "night and gold" }
+  },
+  "Header": {
+    "navLabel": "Sections",
+    "itemLabel": "{index}. {name}",
+    "counter": "{current} / {total} · {name}"
+  },
+  "Stage": {
+    "alt": "Kate's chameleon — placeholder for the 3D model",
+    "title": "chameleon · 3D model",
+    "subtitle": "from the concept art",
+    "coat": "coat: {name}"
+  },
+  "Hero": {
+    "role": "Full-stack developer",
+    "tagline": "I change my coat to fit the task. <accent>Never the quality.</accent>",
+    "intro": "I design interfaces, write APIs and take products all the way to production. One head for front end, back end and infrastructure — and no losses at the seams.",
+    "ctaProjects": "See my work",
+    "ctaContact": "Get in touch"
+  },
+  "About": {
+    "title": "I blend into a team <accent>within a week</accent>",
+    "photo": "photo",
+    "p1": "For seven years I've been building products end to end: from the first Figma sketch to monitoring alerts. A chameleon isn't about camouflage, it's about quickly reading an environment and making it your own.",
+    "p2": "I've worked with three-person startups and with teams of a hundred engineers. I like clear architecture, honest estimates and interfaces that need no explaining.",
+    "meta": "Lisbon · remote · EN"
+  },
+  "Skills": {
+    "title": "The full stack spectrum — <accent>in one skin</accent>",
+    "groups": {
+      "interface": "Interface",
+      "server": "Server",
+      "data": "Data",
+      "infrastructure": "Infrastructure"
+    }
+  },
+  "Projects": {
+    "title": "Work where I <accent>changed my coat</accent>",
+    "preview": "preview · {name}",
+    "caseStudy": "Case study →",
+    "items": {
+      "canopy": { "description": "Eco-tour booking across the Amazon. Lead full-stack." },
+      "ripplePay": { "description": "Payments dashboard for small businesses. Backend and analytics." },
+      "fernhouse": { "description": "CMS and storefront for a garden-center chain. Architecture from scratch." },
+      "lumenAtlas": { "description": "Interactive 3D map for a natural history museum." }
+    }
+  },
+  "Process": {
+    "title": "First I freeze, <accent>then a precise strike</accent>",
+    "steps": {
+      "observe": { "title": "Observe", "text": "I study the product, the users and the constraints. I ask the awkward questions before they turn into bugs." },
+      "design": { "title": "Design", "text": "Architecture, a clickable prototype and an honest estimate — on a single page." },
+      "build": { "title": "Build", "text": "Short iterations and a demo every week. You see progress, not an \"almost done\" status." },
+      "deliver": { "title": "Deliver", "text": "Tests, monitoring, documentation. I hand the project over so the team can run it without me." }
+    }
+  },
+  "Contact": {
+    "title": "Shall we color <accent>your project?</accent>",
+    "intro": "I take one or two projects a quarter. Tell me what you're building — I'll reply within a day, even if it's still just an idea on a napkin.",
+    "cta": "Write to me",
+    "footer": "© 2026 Kate · made in the jungle"
+  }
+}
