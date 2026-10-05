@@ -2,6 +2,9 @@ import { useTranslations } from "next-intl";
 import SceneLoader from "@/components/scene/SceneLoader";
 import type { SectionDef } from "@/lib/sections";
 
+// Soft edges so the canvas never shows a hard cut: fades left/right and at the bottom (intersected).
+const STAGE_MASK = "linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent), linear-gradient(0deg, transparent, #000 9%)";
+
 type ChameleonStageProps = {
   section: SectionDef;
 };
@@ -19,7 +22,9 @@ export default function ChameleonStage({ section }: ChameleonStageProps) {
           style={{ background: `radial-gradient(closest-side, color-mix(in oklch, ${accent} 55%, transparent), transparent)` }}
         />
       </div>
-      <div role="img" aria-label={t("alt")} className="absolute inset-0 [mask-image:linear-gradient(90deg,transparent,#000_10%,#000_90%,transparent)]">
+      <div role="img" aria-label={t("alt")} className="absolute inset-0"
+        style={{ maskImage: STAGE_MASK, maskComposite: "intersect", WebkitMaskImage: STAGE_MASK, WebkitMaskComposite: "source-in" }}
+      >
         <SceneLoader />
       </div>
     </div>

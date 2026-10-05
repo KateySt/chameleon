@@ -160,6 +160,48 @@ function keepTailOutOfBranch(bones: readonly THREE.Bone[], root: THREE.Object3D,
   }
 }
 
+function tailBones0(nodes: NodeMap): THREE.Quaternion[] {
+  return TAIL_BONE_NAMES.map((name) => nodes[name].quaternion.clone());
+}
+
+type TailInput = {
+  /** 0..1 position in the walk cycle. */
+  phase: number;
+  time: number;
+  /** Spring-smoothed scroll speed magnitude: the faster the walk, the tighter the coil. */
+  tuck: number;
+  /** Spring-smoothed signed scroll speed: pushes the tail sideways. */
+  swing: number;
+  sectionProgress: number;
+  animate: boolean;
+};
+
+// Total coil: about 340 degrees, i.e. a ring. Bones near the body stay straighter so the tail leaves the hips smoothly.
+const COIL_PER_BONE = 0.8;
+const WAG_RADIANS = 0.055;
+const scratchTailQuaternion = new THREE.Quaternion();
+
+/**
+ * The tail is posed from its rest orientation, not from the clip: a spiral that curls UP (positive turn about each
+ * bone's local X; the contract's negative X curls down), tightening slightly while walking and loosening between steps,
+ * plus a left-right wag around local Z that travels down the chain. Deterministic, so it can never come out broken.
+ */
+function poseTail(bones: readonly THREE.Bone[], rest: readonly THREE.Quaternion[], input: TailInput) {
+  const stepBreath = input.animate ? Math.sin(input.phase * Math.PI * 2) : 0;
+  const coil = COIL_PER_BONE * (1 + 0.1 * stepBreath + 0.12 * input.tuck - 0.04 * input.sectionProgress);
+  for (let i = 0; i < bones.length; i++) {
+    const along = i / (bones.length - 1);
+    const bone = bones[i];
+    const wag = input.animate
+      ? WAG_RADIANS * (0.35 + 0.65 * along) * Math.sin(input.time * 1.9 - i * 0.42 + input.phase * Math.PI * 2 * 0.5)
+      : 0;
+    const sway = wag + input.swing * 0.03 * along;
+    bone.quaternion.copy(rest[i]);
+    bone.quaternion.multiply(scratchTailQuaternion.setFromAxisAngle(AXIS_X, coil * (0.25 + 0.75 * along)));
+    bone.quaternion.multiply(scratchTailQuaternion.setFromAxisAngle(AXIS_Z, sway));
+  }
+}
+
 const SECTION_COLORS = SECTIONS.map((section) => oklchToLinearRgb(section.accent));
 const WAVE_SECONDS = 1.3;
 const PUPIL_PULSE_DECAY = 2.2;
@@ -187,7 +229,9 @@ export function Chameleon({ stateRef }: ChameleonProps) {
   );
 
   const mixer = useMemo(() => new THREE.AnimationMixer(clonedScene), [clonedScene]);
-  const walkAction = useRef<THREE.AnimationAction | null>(null);
+  // Created during render, not in an effect, so the very first frame is already posed (no bind-pose flash).
+  const walkAction = useMemo(() => startClips(mixer, animations), [mixer, animations]);
+  const tailRest = useMemo(() => tailBones0(nodes), [nodes]);
 
   const walker = useRef<THREE.Group>(null);
   const tailBones = useMemo(() => TAIL_BONE_NAMES.map((name) => nodes[name]), [nodes]);
@@ -196,12 +240,12 @@ export function Chameleon({ stateRef }: ChameleonProps) {
   const tuck = useRef<Spring>({ x: 0, v: 0 });
   const swing = useRef<Spring>({ x: 0, v: 0 });
   const elapsed = useRef(0);
+  const frames = useRef(0);
 
   useEffect(() => {
-    walkAction.current = startClips(mixer, animations);
+    startClips(mixer, animations); // idempotent; re-plays the actions after a StrictMode cleanup
     return () => {
       mixer.stopAllAction();
-      walkAction.current = null;
     };
   }, [animations, mixer]);
 
@@ -217,8 +261,7 @@ export function Chameleon({ stateRef }: ChameleonProps) {
   }, [skin]);
 
   useFrame((_, rawDelta) => {
-    const clip = walkAction.current;
-    if (!clip) return;
+    const clip = walkAction;
     const delta = Math.min(rawDelta, 1 / 20);
     const state = stateRef.current;
     elapsed.current += delta;
@@ -234,20 +277,19 @@ export function Chameleon({ stateRef }: ChameleonProps) {
     const speed = state.scrollSpeed;
     stepSpring(tuck.current, Math.abs(speed), 70, 9, delta);
     stepSpring(swing.current, speed, 45, 3.2, delta);
-    const idle = state.reducedMotion ? 0 : 1;
-    for (let i = 0; i < TAIL_BONE_NAMES.length; i++) {
-      const weight = (i + 1) / TAIL_BONE_NAMES.length;
-      const bone = nodes[TAIL_BONE_NAMES[i]];
-      // Twist: negative rotation around local X tightens the spiral; later bones twist more.
-      const twist = -(0.004 + 0.012 * weight) * state.sectionProgress - tuck.current.x * 0.016 * (0.4 + weight);
-      // Sway: around local Z, the tip swings most, with a small idle ripple down the chain.
-      const sway = swing.current.x * 0.035 * weight + idle * 0.006 * weight * Math.sin(elapsed.current * 1.3 - i * 0.45);
-      rotateAroundLocalAxis(bone, AXIS_X, twist);
-      rotateAroundLocalAxis(bone, AXIS_Z, sway);
-    }
+    poseTail(tailBones, tailRest, {
+      phase: (((cycles % 1) + 1) % 1),
+      time: state.reducedMotion ? 0 : elapsed.current,
+      tuck: tuck.current.x,
+      swing: swing.current.x,
+      sectionProgress: state.sectionProgress,
+      animate: !state.reducedMotion,
+    });
 
     const rig = walker.current?.parent;
-    if (rig) keepTailOutOfBranch(tailBones, clonedScene, rig);
+    frames.current++;
+    // Matrices only become valid after the first render; before that the branch test would push the tail around.
+    if (rig && frames.current > 3) keepTailOutOfBranch(tailBones, clonedScene, rig);
 
     // Color wave and pupil pulse (uniform writes only, no React state).
     waveClock.current = Math.min(WAVE_SECONDS, waveClock.current + delta);

@@ -14,6 +14,13 @@ type ScrollSyncProps = {
 
 /** Turns the DOM-driven progress store into smoothed values for the scene. Renders nothing; must precede consumers. */
 export function ScrollSync({ stateRef }: ScrollSyncProps) {
+  // Start from the current scroll (the browser restores it on refresh) so nothing has to "catch up" on the first frames.
+  useEffect(() => {
+    const store = useProgressStore.getState();
+    stateRef.current.walkCycles = store.totalProgress * WALK_CYCLES_TOTAL;
+    stateRef.current.sectionProgress = store.sectionProgress;
+  }, [stateRef]);
+
   useEffect(() => {
     const query = window.matchMedia("(prefers-reduced-motion: reduce)");
     const apply = () => {

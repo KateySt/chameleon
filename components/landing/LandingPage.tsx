@@ -84,7 +84,7 @@ export default function LandingPage() {
 
   return (
     <div
-      className="relative h-dvh overflow-hidden bg-[#03130e] text-[#F4F1E6] font-[family-name:var(--font-manrope)]"
+      className="relative h-dvh overflow-hidden bg-[#03130e] text-[#F4F1E6] font-[family-name:var(--font-google-sans)]"
       style={{ WebkitFontSmoothing: "antialiased" }}
     >
       <JungleBackdrop accent={active.accent} />

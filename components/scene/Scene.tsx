@@ -4,6 +4,7 @@ import { Suspense, useLayoutEffect, useRef, type RefObject } from "react";
 import type { Group } from "three";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Branch } from "@/components/scene/Branch";
+import { Foliage } from "@/components/scene/Foliage";
 import { Chameleon } from "@/components/scene/Chameleon";
 import { ScrollSync } from "@/components/scene/ScrollSync";
 import { createSceneState, METERS_PER_CYCLE, WALK_CYCLES_TOTAL, type SceneState } from "@/components/scene/sceneState";
@@ -67,6 +68,7 @@ export default function Scene() {
           <BranchTrack stateRef={stateRef} />
           <Chameleon stateRef={stateRef} />
         </group>
+        <Foliage stateRef={stateRef} />
       </Suspense>
     </Canvas>
   );
