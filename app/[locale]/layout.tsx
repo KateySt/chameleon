@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { Google_Sans } from "next/font/google";
-import { hasLocale, NextIntlClientProvider } from "next-intl";
-import { getTranslations, setRequestLocale } from "next-intl/server";
-import { notFound } from "next/navigation";
+import { NextIntlClientProvider } from "next-intl";
+import { getLocale, getTranslations } from "next-intl/server";
+import { preload } from "react-dom";
+import { MODEL_PATH } from "@/components/scene/modelPath";
 import { routing } from "@/i18n/routing";
 import "../globals.css";
 
@@ -16,10 +17,8 @@ export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));
 }
 
-export async function generateMetadata({ params }: LayoutProps<"/[locale]">): Promise<Metadata> {
-  const { locale } = await params;
-  if (!hasLocale(routing.locales, locale)) return {};
-  const t = await getTranslations({ locale, namespace: "Meta" });
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("Meta");
 
   return {
     title: t("title"),
@@ -27,10 +26,10 @@ export async function generateMetadata({ params }: LayoutProps<"/[locale]">): Pr
   };
 }
 
-export default async function RootLayout({ children, params }: LayoutProps<"/[locale]">) {
-  const { locale } = await params;
-  if (!hasLocale(routing.locales, locale)) notFound();
-  setRequestLocale(locale);
+export default async function RootLayout({ children }: LayoutProps<"/[locale]">) {
+  const locale = await getLocale();
+  // Start fetching the model with the HTML instead of after the Scene chunk; crossOrigin must match GLTFLoader's fetch.
+  preload(MODEL_PATH, { as: "fetch", crossOrigin: "anonymous" });
 
   return (
     <html

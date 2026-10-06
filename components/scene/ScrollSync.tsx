@@ -1,12 +1,18 @@
 "use client";
 
-import { useEffect, type RefObject } from "react";
+import { useEffect, useRef, type RefObject } from "react";
 import { useFrame } from "@react-three/fiber";
 import { useProgressStore } from "@/lib/progressStore";
 import { WALK_CYCLES_TOTAL, type SceneState } from "@/components/scene/sceneState";
 
 const MAX_SPEED_PX_PER_S = 2400;
 const VELOCITY_DECAY_MS = 140;
+/** Top walking pace (cycles/s; the clip's own pace is 0.5). A fast scroll is caught up at this pace instead of a sprint. */
+const MAX_WALK_CYCLES_PER_S = 1.8;
+/** Pace per cycle still to go: the walk eases into its stop. */
+const WALK_GAIN = 2;
+/** Pace response; 4 * WALK_GAIN is critical damping, so the walk never overshoots and steps back. */
+const WALK_RESPONSE = 4 * WALK_GAIN;
 
 type ScrollSyncProps = {
   stateRef: RefObject<SceneState>;
@@ -31,7 +37,10 @@ export function ScrollSync({ stateRef }: ScrollSyncProps) {
     return () => query.removeEventListener("change", apply);
   }, [stateRef]);
 
-  useFrame((_, delta) => {
+  const walkPace = useRef(0);
+
+  useFrame((_, rawDelta) => {
+    const delta = Math.min(rawDelta, 1 / 20);
     const state = stateRef.current;
     const store = useProgressStore.getState();
 
@@ -43,7 +52,12 @@ export function ScrollSync({ stateRef }: ScrollSyncProps) {
     }
 
     const targetCycles = store.totalProgress * WALK_CYCLES_TOTAL;
-    state.walkCycles += (targetCycles - state.walkCycles) * (1 - Math.exp(-delta * 9));
+    const wantedPace = Math.max(
+      -MAX_WALK_CYCLES_PER_S,
+      Math.min(MAX_WALK_CYCLES_PER_S, (targetCycles - state.walkCycles) * WALK_GAIN)
+    );
+    walkPace.current += (wantedPace - walkPace.current) * (1 - Math.exp(-delta * WALK_RESPONSE));
+    state.walkCycles += walkPace.current * delta;
 
     const age = performance.now() - store.velocityAt;
     const decayed = store.scrollVelocity * Math.exp(-age / VELOCITY_DECAY_MS);

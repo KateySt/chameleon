@@ -1,13 +1,13 @@
 "use client";
 
-import { Suspense, useLayoutEffect, useRef, type RefObject } from "react";
+import { Suspense, useEffect, useLayoutEffect, useRef, type RefObject } from "react";
 import type { Group } from "three";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Branch } from "@/components/scene/Branch";
 import { Foliage } from "@/components/scene/Foliage";
 import { Chameleon } from "@/components/scene/Chameleon";
 import { ScrollSync } from "@/components/scene/ScrollSync";
-import { createSceneState, METERS_PER_CYCLE, WALK_CYCLES_TOTAL, type SceneState } from "@/components/scene/sceneState";
+import { branchTravel, createSceneState, type SceneState } from "@/components/scene/sceneState";
 
 const FOV = 28;
 const FRAME_WIDTH = 1.9;
@@ -37,8 +37,7 @@ function BranchTrack({ stateRef }: { stateRef: RefObject<SceneState> }) {
   const group = useRef<Group>(null);
   useFrame(() => {
     if (!group.current) return;
-    const travel = (stateRef.current.walkCycles - WALK_CYCLES_TOTAL / 2) * METERS_PER_CYCLE;
-    group.current.position.x = -travel;
+    group.current.position.x = -branchTravel(stateRef.current.walkCycles);
   });
   return (
     <group ref={group}>
@@ -47,7 +46,13 @@ function BranchTrack({ stateRef }: { stateRef: RefObject<SceneState> }) {
   );
 }
 
-export default function Scene() {
+/** Mounts after the model suspended children resolved, i.e. once the chameleon is ready to draw. */
+function ReadySignal({ onReady }: { onReady: () => void }) {
+  useEffect(onReady, [onReady]);
+  return null;
+}
+
+export default function Scene({ onReady }: { onReady: () => void }) {
   const stateRef = useRef(createSceneState());
 
   return (
@@ -69,6 +74,7 @@ export default function Scene() {
           <Chameleon stateRef={stateRef} />
         </group>
         <Foliage stateRef={stateRef} />
+        <ReadySignal onReady={onReady} />
       </Suspense>
     </Canvas>
   );

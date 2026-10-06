@@ -1,7 +1,7 @@
 /*
 Landing-page chameleon. Follows docs/CHAMELEON_MODEL_CONTRACT.md: own AnimationMixer,
 mixer.update() first and code second in every frame, walk scrubbed by phase,
-tail rotated additively on top of the clip pose.
+tail posed absolutely from its rest orientation (the walk clip's tail tracks are overwritten).
 */
 "use client";
 
@@ -21,10 +21,10 @@ import {
   type EyeUniforms,
   type SkinUniforms,
 } from "@/components/scene/chameleonMaterials";
-import { BRANCH_AXIS_Y, BRANCH_RADIUS_MAX } from "@/components/scene/branchGeometry";
-import { type SceneState } from "@/components/scene/sceneState";
+import { BRANCH_AXIS_Y, BRANCH_RADIUS, BRANCH_RADIUS_MAX, branchSag } from "@/components/scene/branchGeometry";
+import { branchTravel, type SceneState } from "@/components/scene/sceneState";
+import { MODEL_PATH } from "@/components/scene/modelPath";
 
-export const MODEL_PATH = "/models/chameleon.glb";
 
 type TailBoneName = `Tail_${"01" | "02" | "03" | "04" | "05" | "06" | "07" | "08" | "09" | "10" | "11" | "12"}`;
 
@@ -33,11 +33,22 @@ const TAIL_BONE_NAMES: readonly TailBoneName[] = [
   "Tail_07", "Tail_08", "Tail_09", "Tail_10", "Tail_11", "Tail_12",
 ];
 
+/** upper → middle → end bone of each leg; the end bone (foot / hand) is the one planted on the branch. */
+const LEG_CHAINS = [
+  ["HindLeg_Thigh_L", "HindLeg_Shin_L", "HindLeg_Foot_L"],
+  ["HindLeg_Thigh_R", "HindLeg_Shin_R", "HindLeg_Foot_R"],
+  ["FrontLeg_Upper_L", "FrontLeg_Lower_L", "FrontLeg_Hand_L"],
+  ["FrontLeg_Upper_R", "FrontLeg_Lower_R", "FrontLeg_Hand_R"],
+] as const;
+
+type LegBoneName = (typeof LEG_CHAINS)[number][number];
+
 type NodeMap = {
   Chameleon: THREE.SkinnedMesh;
   Chameleon_Eyes: THREE.SkinnedMesh;
   Hips: THREE.Bone;
-} & Record<TailBoneName, THREE.Bone>;
+} & Record<TailBoneName, THREE.Bone> &
+  Record<LegBoneName, THREE.Bone>;
 
 type GLTFResult = GLTF & {
   nodes: NodeMap;
@@ -67,7 +78,8 @@ function startClips(mixer: THREE.AnimationMixer, animations: THREE.AnimationClip
   const eyesLookClip = animations.find((clip) => clip.name === "eyes_look");
   if (!walkClip || !eyesLookClip) throw new Error("chameleon.glb is missing the walk / eyes_look clips");
 
-  // Both actions stay enabled so the mixer restores the rest pose each frame and code offsets never accumulate.
+  // The mixer only writes a bone when its blended value changed since the last frame, so a paused or held clip
+  // does NOT reset the pose: code must set clip-bound bones absolutely (from rest or a saved clip pose), never relatively.
   const walk = mixer.clipAction(walkClip);
   walk.paused = true; // scrubbed by phase, never by time
   walk.play();
@@ -160,6 +172,123 @@ function keepTailOutOfBranch(bones: readonly THREE.Bone[], root: THREE.Object3D,
   }
 }
 
+type Leg = {
+  bones: readonly [upper: THREE.Bone, middle: THREE.Bone, end: THREE.Bone];
+  /** This frame's walk-clip rotations; the mixer skips unchanged values, so they are put back before every update. */
+  clipPose: readonly [THREE.Quaternion, THREE.Quaternion, THREE.Quaternion];
+};
+
+function createLegs(nodes: NodeMap): Leg[] {
+  return LEG_CHAINS.map(([upper, middle, end]) => ({
+    bones: [nodes[upper], nodes[middle], nodes[end]],
+    clipPose: [nodes[upper].quaternion.clone(), nodes[middle].quaternion.clone(), nodes[end].quaternion.clone()],
+  }));
+}
+
+function restoreLegClipPose(legs: readonly Leg[]) {
+  for (const leg of legs) for (let i = 0; i < 3; i++) leg.bones[i].quaternion.copy(leg.clipPose[i]);
+}
+
+function captureLegClipPose(legs: readonly Leg[]) {
+  for (const leg of legs) for (let i = 0; i < 3; i++) leg.clipPose[i].copy(leg.bones[i].quaternion);
+}
+
+const WORLD_UP = new THREE.Vector3(0, 1, 0);
+const ikA = new THREE.Vector3();
+const ikB = new THREE.Vector3();
+const ikC = new THREE.Vector3();
+const ikFrom = new THREE.Vector3();
+const ikTo = new THREE.Vector3();
+const ikAxis = new THREE.Vector3();
+const ikTarget = new THREE.Vector3();
+const ikNormal = new THREE.Vector3();
+const ikRotation = new THREE.Quaternion();
+const ikWorld = new THREE.Quaternion();
+const ikLocal = new THREE.Quaternion();
+const ikEndWorld = new THREE.Quaternion();
+const ikRigWorld = new THREE.Quaternion();
+
+/** Applies a world-space rotation to a bone (about its own pivot) and refreshes its subtree's matrices. */
+function rotateBoneInWorld(bone: THREE.Bone, rotation: THREE.Quaternion) {
+  bone.getWorldQuaternion(ikWorld);
+  // world' = rotation * world  =>  local' = local * (world^-1 * rotation * world)
+  ikLocal.copy(ikWorld).invert().multiply(rotation).multiply(ikWorld);
+  bone.quaternion.multiply(ikLocal);
+  bone.updateMatrixWorld(true);
+}
+
+/** Analytic two-bone IK: bends the middle joint to the needed angle in the leg's current plane, then swings the chain onto the target. */
+function solveTwoBone([upper, middle, end]: Leg["bones"], target: THREE.Vector3) {
+  ikA.setFromMatrixPosition(upper.matrixWorld);
+  ikB.setFromMatrixPosition(middle.matrixWorld);
+  ikC.setFromMatrixPosition(end.matrixWorld);
+  const upperLength = ikA.distanceTo(ikB);
+  const lowerLength = ikB.distanceTo(ikC);
+  const reach = THREE.MathUtils.clamp(
+    ikA.distanceTo(target),
+    Math.abs(upperLength - lowerLength) + 1e-3,
+    upperLength + lowerLength - 1e-3
+  );
+
+  ikFrom.subVectors(ikC, ikA);
+  ikTo.subVectors(ikB, ikA);
+  ikAxis.crossVectors(ikFrom, ikTo);
+  if (ikAxis.lengthSq() > 1e-12) {
+    // A positive turn about (AC x AB) opens the middle joint.
+    ikAxis.normalize();
+    const current = ikFrom.subVectors(ikA, ikB).angleTo(ikTo.subVectors(ikC, ikB));
+    const wanted = Math.acos(
+      THREE.MathUtils.clamp(
+        (upperLength * upperLength + lowerLength * lowerLength - reach * reach) / (2 * upperLength * lowerLength),
+        -1,
+        1
+      )
+    );
+    rotateBoneInWorld(middle, ikRotation.setFromAxisAngle(ikAxis, wanted - current));
+    ikC.setFromMatrixPosition(end.matrixWorld);
+  }
+
+  ikFrom.subVectors(ikC, ikA).normalize();
+  ikTo.subVectors(target, ikA).normalize();
+  rotateBoneInWorld(upper, ikRotation.setFromUnitVectors(ikFrom, ikTo));
+}
+
+/**
+ * The walk clip was authored on a flat floor (feet at Y = 0, spread wider than the branch), so on the round branch
+ * the feet would hang in the air. Each foot is moved radially onto the branch, keeping the clip's height above the
+ * floor as height above the bark (steps still lift), and its sole is tilted to the bark normal so it grips the side.
+ */
+function plantFeet(legs: readonly Leg[], root: THREE.Object3D, rig: THREE.Object3D, travel: number) {
+  root.updateMatrixWorld(true);
+  rig.getWorldQuaternion(ikRigWorld);
+  for (const leg of legs) {
+    const [, middle, end] = leg.bones;
+    end.getWorldQuaternion(ikEndWorld);
+
+    // Rig space: the branch runs along X, its top line is Y = 0 + sag.
+    ikTarget.setFromMatrixPosition(end.matrixWorld);
+    rig.worldToLocal(ikTarget);
+    const axisY = BRANCH_AXIS_Y + branchSag(ikTarget.x + travel);
+    const dy = ikTarget.y - axisY;
+    const dz = ikTarget.z;
+    const distance = Math.hypot(dy, dz);
+    const outY = distance > 1e-4 ? dy / distance : 1;
+    const outZ = distance > 1e-4 ? dz / distance : 0;
+    const radius = BRANCH_RADIUS + Math.max(0, ikTarget.y);
+    ikTarget.set(ikTarget.x, axisY + outY * radius, outZ * radius);
+    rig.localToWorld(ikTarget);
+    ikNormal.set(0, outY, outZ).applyQuaternion(ikRigWorld);
+
+    solveTwoBone(leg.bones, ikTarget);
+
+    // Keep the clip's foot orientation, tilted from "floor up" to the bark normal: local = parentWorld^-1 * world.
+    ikRotation.setFromUnitVectors(WORLD_UP, ikNormal).multiply(ikEndWorld);
+    middle.getWorldQuaternion(ikWorld);
+    end.quaternion.copy(ikWorld.invert().multiply(ikRotation));
+    end.updateMatrixWorld(true);
+  }
+}
+
 function tailBones0(nodes: NodeMap): THREE.Quaternion[] {
   return TAIL_BONE_NAMES.map((name) => nodes[name].quaternion.clone());
 }
@@ -232,6 +361,7 @@ export function Chameleon({ stateRef }: ChameleonProps) {
   // Created during render, not in an effect, so the very first frame is already posed (no bind-pose flash).
   const walkAction = useMemo(() => startClips(mixer, animations), [mixer, animations]);
   const tailRest = useMemo(() => tailBones0(nodes), [nodes]);
+  const legs = useMemo(() => createLegs(nodes), [nodes]);
 
   const walker = useRef<THREE.Group>(null);
   const tailBones = useMemo(() => TAIL_BONE_NAMES.map((name) => nodes[name]), [nodes]);
@@ -270,8 +400,10 @@ export function Chameleon({ stateRef }: ChameleonProps) {
     const cycles = state.reducedMotion ? 0 : state.walkCycles;
     scrubWalk(clip, cycles);
 
-    // 1) clips first ...
+    // 1) clips first (legs get the clip pose back first: IK overwrote it and the mixer only writes changed values) ...
+    restoreLegClipPose(legs);
     mixer.update(delta);
+    captureLegClipPose(legs);
 
     // 2) ... then code on top of the pose.
     const speed = state.scrollSpeed;
@@ -289,7 +421,10 @@ export function Chameleon({ stateRef }: ChameleonProps) {
     const rig = walker.current?.parent;
     frames.current++;
     // Matrices only become valid after the first render; before that the branch test would push the tail around.
-    if (rig && frames.current > 3) keepTailOutOfBranch(tailBones, clonedScene, rig);
+    if (rig && frames.current > 3) {
+      plantFeet(legs, clonedScene, rig, branchTravel(state.walkCycles));
+      keepTailOutOfBranch(tailBones, clonedScene, rig);
+    }
 
     // Color wave and pupil pulse (uniform writes only, no React state).
     waveClock.current = Math.min(WAVE_SECONDS, waveClock.current + delta);

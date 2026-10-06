@@ -16,3 +16,8 @@ export function createSceneState(): SceneState {
 export const WALK_CYCLES_TOTAL = 24;
 /** Distance (original model units) the chameleon covers per walk cycle, per the model contract. */
 export const METERS_PER_CYCLE = 0.12;
+
+/** How far the branch has slid back under the chameleon (BranchTrack offsets it by minus this). */
+export function branchTravel(walkCycles: number): number {
+  return (walkCycles - WALK_CYCLES_TOTAL / 2) * METERS_PER_CYCLE;
+}

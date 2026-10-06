@@ -1,74 +1,63 @@
 {
   "Meta": {
-    "title": "Kate — Full-stack developer",
-    "description": "Kate's portfolio: I design interfaces, write APIs and take products all the way to production."
+    "title": "Chameleon — a walk through the jungle canopy",
+    "description": "Walk along a jungle branch with a chameleon: how it changes colour, looks two ways at once, hunts with its tongue and holds on with its feet."
   },
   "Sections": {
-    "hero": { "label": "01 · emerald coat", "navLabel": "Hello", "accentName": "emerald" },
-    "about": { "label": "02 · turquoise coat", "navLabel": "About", "accentName": "turquoise" },
-    "skills": { "label": "03 · macaw-yellow coat", "navLabel": "Skills", "accentName": "macaw yellow" },
-    "projects": { "label": "04 · fuchsia coat", "navLabel": "Projects", "accentName": "fuchsia" },
-    "process": { "label": "05 · tropical orange coat", "navLabel": "Process", "accentName": "orange" },
-    "contact": { "label": "06 · night coat, with gold", "navLabel": "Contact", "accentName": "night and gold" }
+    "hero": {
+      "label": "01 · emerald coat",
+      "navLabel": "Hello",
+      "title": "Chameleon",
+      "tagline": "The slowest hunter in the canopy. <accent>And the most patient.</accent>",
+      "p1": "Its name comes from the Greek khamaileōn, “ground lion”. There are around two hundred species, and about half of them live only on Madagascar.",
+      "p2": "Scroll down, and this one will walk you along its branch."
+    },
+    "color": {
+      "label": "02 · turquoise coat",
+      "navLabel": "Colour",
+      "title": "Colour is a mood, <accent>not a mask</accent>",
+      "p1": "Under a chameleon's skin lie cells packed with tiny guanine crystals. When the animal relaxes or gets excited, the spacing between the crystals changes, and so does the light they reflect: green turns turquoise, yellow or a startled red.",
+      "p2": "Camouflage is mostly a side effect. Chameleons change colour to warm up, to cool down and above all to talk: to court a mate, to warn off a rival, or to say “I give up”."
+    },
+    "eyes": {
+      "label": "03 · macaw-yellow coat",
+      "navLabel": "Eyes",
+      "title": "Two eyes, <accent>two directions</accent>",
+      "p1": "Each eye sits in a turret of skin and swivels on its own, so a chameleon can watch the leaf above and the branch behind at the same time, almost the whole sphere around it, without turning its head.",
+      "p2": "When something tasty appears, both eyes swing forward and lock onto it. Only then does the chameleon judge the distance and get ready to strike."
+    },
+    "tongue": {
+      "label": "04 · fuchsia coat",
+      "navLabel": "Tongue",
+      "title": "A tongue <accent>faster than a blink</accent>",
+      "p1": "The tongue is bunched around a slender bone in the throat, like a spring pressed over a rod. Released, it can shoot out to twice the length of the body; in the smallest species it goes from rest to about 100 km/h in a hundredth of a second.",
+      "p2": "The tip is a muscular cup coated in mucus hundreds of times thicker than human saliva, sticky enough to haul back an insect or even a small lizard."
+    },
+    "grip": {
+      "label": "05 · tropical orange coat",
+      "navLabel": "Grip",
+      "title": "Feet like tongs, <accent>a tail like a hand</accent>",
+      "p1": "A chameleon's toes are fused into two bundles, two on one side and three on the other, so every foot closes around a branch like a pair of tongs.",
+      "p2": "The tail is a fifth hand: it curls round a twig for balance and coils up like a spring when it isn't needed. On the move, the chameleon rocks back and forth like a leaf in the wind."
+    },
+    "night": {
+      "label": "06 · night coat, with gold",
+      "navLabel": "Night",
+      "title": "At night the jungle <accent>goes quiet</accent>",
+      "p1": "When the light goes, chameleons climb out to the thinnest twigs, where any snake would shake the branch long before it got close, and fall asleep. Many turn pale in their sleep and are easy to spot with a torch.",
+      "p2": "Some species keep one more secret: under ultraviolet light, small bumps on their skulls glow blue — bone shining through thin skin."
+    }
   },
   "Header": {
+    "brand": "Chameleon",
     "navLabel": "Sections",
     "itemLabel": "{index}. {name}",
     "counter": "{current} / {total} · {name}"
   },
   "Stage": {
-    "alt": "Kate's chameleon — placeholder for the 3D model",
-    "title": "chameleon · 3D model",
-    "subtitle": "from the concept art",
-    "coat": "coat: {name}"
+    "alt": "A 3D chameleon walking along a jungle branch"
   },
-  "Hero": {
-    "role": "Full-stack developer",
-    "tagline": "I change my coat to fit the task. <accent>Never the quality.</accent>",
-    "intro": "I design interfaces, write APIs and take products all the way to production. One head for front end, back end and infrastructure — and no losses at the seams.",
-    "ctaProjects": "See my work",
-    "ctaContact": "Get in touch"
-  },
-  "About": {
-    "title": "I blend into a team <accent>within a week</accent>",
-    "photo": "photo",
-    "p1": "For seven years I've been building products end to end: from the first Figma sketch to monitoring alerts. A chameleon isn't about camouflage, it's about quickly reading an environment and making it your own.",
-    "p2": "I've worked with three-person startups and with teams of a hundred engineers. I like clear architecture, honest estimates and interfaces that need no explaining.",
-    "meta": "Lisbon · remote · EN"
-  },
-  "Skills": {
-    "title": "The full stack spectrum — <accent>in one skin</accent>",
-    "groups": {
-      "interface": "Interface",
-      "server": "Server",
-      "data": "Data",
-      "infrastructure": "Infrastructure"
-    }
-  },
-  "Projects": {
-    "title": "Work where I <accent>changed my coat</accent>",
-    "preview": "preview · {name}",
-    "caseStudy": "Case study →",
-    "items": {
-      "canopy": { "description": "Eco-tour booking across the Amazon. Lead full-stack." },
-      "ripplePay": { "description": "Payments dashboard for small businesses. Backend and analytics." },
-      "fernhouse": { "description": "CMS and storefront for a garden-center chain. Architecture from scratch." },
-      "lumenAtlas": { "description": "Interactive 3D map for a natural history museum." }
-    }
-  },
-  "Process": {
-    "title": "First I freeze, <accent>then a precise strike</accent>",
-    "steps": {
-      "observe": { "title": "Observe", "text": "I study the product, the users and the constraints. I ask the awkward questions before they turn into bugs." },
-      "design": { "title": "Design", "text": "Architecture, a clickable prototype and an honest estimate — on a single page." },
-      "build": { "title": "Build", "text": "Short iterations and a demo every week. You see progress, not an \"almost done\" status." },
-      "deliver": { "title": "Deliver", "text": "Tests, monitoring, documentation. I hand the project over so the team can run it without me." }
-    }
-  },
-  "Contact": {
-    "title": "Shall we color <accent>your project?</accent>",
-    "intro": "I take one or two projects a quarter. Tell me what you're building — I'll reply within a day, even if it's still just an idea on a napkin.",
-    "cta": "Write to me",
-    "footer": "© 2026 Kate · made in the jungle"
+  "Footer": {
+    "text": "End of the branch. Good night."
   }
 }
